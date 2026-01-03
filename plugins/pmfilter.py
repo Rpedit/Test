@@ -38,41 +38,16 @@ BUTTONS2 = {}
 SPELL_CHECK = {}
 
 
-@Client.on_message(filters.group & (filters.text | filters.caption) & filters.incoming, group=-1)
-async def strict_cleaner(client, message):
-    if not message.from_user:
-        return
-
-    # Determine the text content to check (either text or caption)
-    text_content = message.text or message.caption or ""
-
-    # Check for prohibited content: Commands (/), Mentions (@), Hashtags (#)
-    if text_content.startswith("/") or "@" in text_content or "#" in text_content:
-        # Check if user is admin
-        if await is_check_admin(client, message.chat.id, message.from_user.id):
-            return
-
-        try:
-            await message.delete()
-            message.stop_propagation()
-        except Exception:
-            pass
-            
-@Client.on_message(filters.group & filters.text & filters.incoming, group=-1)
+@Client.on_message(filters.group & filters.text & filters.incoming & ~filters.regex(r"^/") )
 async def give_filter(client, message):
-    if message.chat.id != SUPPORT_CHAT_ID:
-        user = message.from_user
-        if user and not await is_check_admin(client, message.chat.id, user.id):
-            if re.search(r'[@#]|https?://|t\.me|telegram\.me', message.text, re.IGNORECASE) or message.text.startswith('/'):
-                await message.delete()
-                return message.stop_propagation()
-
+    if message.chat.id == SILENT_GROUP_ID:
+        return
     if EMOJI_MODE:
         try:
             await message.react(emoji=random.choice(REACTIONS), big=True)
         except Exception:
-            await message.react(emoji="⚡️", big=True)
-
+            await message.react(emoji="⚡️")
+            pass
     await mdb.update_top_messages(message.from_user.id, message.text)
     if message.chat.id != SUPPORT_CHAT_ID:
         settings = await get_settings(message.chat.id)
