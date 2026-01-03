@@ -38,16 +38,21 @@ BUTTONS2 = {}
 SPELL_CHECK = {}
 
 
-@Client.on_message(filters.group & filters.text & filters.incoming & ~filters.regex(r"^/") )
+@Client.on_message(filters.group & filters.text & filters.incoming, group=-1)
 async def give_filter(client, message):
-    if message.chat.id == SILENT_GROUP_ID:
-        return
+    if message.chat.id != SUPPORT_CHAT_ID:
+        user = message.from_user
+        if user and not await is_check_admin(client, message.chat.id, user.id):
+            if re.search(r'[@#]|https?://|t\.me|telegram\.me', message.text, re.IGNORECASE) or message.text.startswith('/'):
+                await message.delete()
+                return message.stop_propagation()
+
     if EMOJI_MODE:
         try:
             await message.react(emoji=random.choice(REACTIONS), big=True)
         except Exception:
-            await message.react(emoji="⚡️")
-            pass
+            await message.react(emoji="⚡️", big=True)
+
     await mdb.update_top_messages(message.from_user.id, message.text)
     if message.chat.id != SUPPORT_CHAT_ID:
         settings = await get_settings(message.chat.id)
